@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #fbf1f3;
+  --color-brand-100: #f6dde2;
+  --color-brand-500: #a42a40;
+  --color-brand-600: #8f2236;
+  --color-brand-700: #7f1d2d;
+  --color-brand-800: #671624;
+  --color-ok-600: #15803d;
+  --color-error-600: #b91c1c;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    margin: 0;
+    min-height: 100vh;
+  }
+}
