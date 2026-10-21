@@ -6,6 +6,7 @@
 .env.keys
 .env.local
 .env.*.local
+
 # Variables de entorno (nunca subir secretos)
 .env
 .env.*

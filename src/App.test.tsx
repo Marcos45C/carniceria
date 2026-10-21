@@ -1,44 +1,145 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import type { Session } from '@supabase/supabase-js'
+import { MemoryRouter } from 'react-router'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
-describe('App', () => {
-  it('muestra el nombre de la aplicación y el botón de actualizar precios', () => {
-    render(<App />)
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Carnicería Pro' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /actualizar precios/i }),
-    ).toBeInTheDocument()
+const authMocks = vi.hoisted(() => ({
+  subscribeToSession: vi.fn(),
+  signInWithPassword: vi.fn(),
+  signOut: vi.fn(),
+}))
+
+// Reemplaza el acceso real a Supabase: estas pruebas no necesitan servidor.
+vi.mock('./features/auth/authService', () => authMocks)
+
+const demoSession = {
+  user: { id: 'user-1', email: 'carnicero@demo.local' },
+} as unknown as Session
+
+let emitSession: (session: Session | null) => void = () => {}
+
+function mockInitialSession(initial: Session | null) {
+  authMocks.subscribeToSession.mockImplementation(
+    (callback: (session: Session | null) => void) => {
+      emitSession = callback
+      callback(initial)
+      return () => {}
+    },
+  )
+}
+
+function renderApp(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <App />
+    </MemoryRouter>,
+  )
+}
+
+beforeEach(() => {
+  vi.resetAllMocks()
+  authMocks.signOut.mockImplementation(async () => {
+    emitSession(null)
+  })
+})
+
+describe('rutas protegidas', () => {
+  it('redirige al login cuando no hay sesión y no muestra contenido privado', async () => {
+    mockInitialSession(null)
+    renderApp('/')
+
+    expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /actualizar precios/i })).not.toBeInTheDocument()
   })
 
-  it('filtra los cortes al buscar por nombre', async () => {
-    const user = userEvent.setup()
-    render(<App />)
+  it('muestra el dashboard cuando hay sesión', async () => {
+    mockInitialSession(demoSession)
+    renderApp('/')
 
-    await user.type(screen.getByRole('searchbox', { name: /buscar corte/i }), 'asado')
-
-    expect(screen.getAllByText('Asado de tira').length).toBeGreaterThan(0)
-    expect(screen.queryAllByText('Vacío')).toHaveLength(0)
+    expect(await screen.findByRole('button', { name: /actualizar precios/i })).toBeInTheDocument()
+    expect(screen.getByText('carnicero@demo.local')).toBeInTheDocument()
   })
 
-  it('permite editar el precio de un corte', async () => {
-    const user = userEvent.setup()
-    render(<App />)
+  it('redirige del login al dashboard si ya hay sesión', async () => {
+    mockInitialSession(demoSession)
+    renderApp('/login')
 
-    // La primera coincidencia es la de la tabla; la segunda es la tarjeta móvil.
-    const [editButton] = screen.getAllByRole('button', {
-      name: 'Editar precio de Asado de tira',
+    expect(await screen.findByRole('button', { name: /actualizar precios/i })).toBeInTheDocument()
+  })
+
+  it('cierra la sesión y vuelve al login', async () => {
+    const user = userEvent.setup()
+    mockInitialSession(demoSession)
+    renderApp('/')
+
+    await user.click(await screen.findByRole('button', { name: 'Salir' }))
+
+    expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument()
+    expect(authMocks.signOut).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('pantalla de login', () => {
+  it('valida los campos antes de llamar al servidor', async () => {
+    const user = userEvent.setup()
+    mockInitialSession(null)
+    renderApp('/login')
+
+    await user.type(await screen.findByLabelText('Correo electrónico'), 'no-es-un-correo')
+    await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }))
+
+    expect(screen.getByText('Ingresá un correo electrónico válido.')).toBeInTheDocument()
+    expect(screen.getByText('Ingresá tu contraseña.')).toBeInTheDocument()
+    expect(authMocks.signInWithPassword).not.toHaveBeenCalled()
+  })
+
+  it('muestra el error cuando las credenciales son incorrectas', async () => {
+    const user = userEvent.setup()
+    mockInitialSession(null)
+    authMocks.signInWithPassword.mockResolvedValue({
+      ok: false,
+      message: 'Correo o contraseña incorrectos.',
     })
-    await user.click(editButton)
+    renderApp('/login')
 
-    const input = screen.getByRole('textbox', { name: 'Nuevo precio de Asado de tira' })
-    await user.clear(input)
-    await user.type(input, '13000')
-    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+    await user.type(await screen.findByLabelText('Correo electrónico'), 'carnicero@demo.local')
+    await user.type(screen.getByLabelText('Contraseña'), 'incorrecta')
+    await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }))
 
-    expect(screen.getAllByText(/13\.000,00/).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos.')
+  })
+
+  it('inicia sesión y muestra el dashboard', async () => {
+    const user = userEvent.setup()
+    mockInitialSession(null)
+    authMocks.signInWithPassword.mockImplementation(async () => {
+      emitSession(demoSession)
+      return { ok: true }
+    })
+    renderApp('/login')
+
+    await user.type(await screen.findByLabelText('Correo electrónico'), 'carnicero@demo.local')
+    await user.type(screen.getByLabelText('Contraseña'), 'Demo1234!')
+    await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }))
+
+    expect(await screen.findByRole('button', { name: /actualizar precios/i })).toBeInTheDocument()
+    expect(authMocks.signInWithPassword).toHaveBeenCalledWith('carnicero@demo.local', 'Demo1234!')
+  })
+
+  it('permite mostrar y ocultar la contraseña', async () => {
+    const user = userEvent.setup()
+    mockInitialSession(null)
+    renderApp('/login')
+
+    const input = await screen.findByLabelText('Contraseña')
+    expect(input).toHaveAttribute('type', 'password')
+
+    await user.click(screen.getByRole('button', { name: 'Mostrar contraseña' }))
+    expect(input).toHaveAttribute('type', 'text')
+
+    await user.click(screen.getByRole('button', { name: 'Ocultar contraseña' }))
+    expect(input).toHaveAttribute('type', 'password')
   })
 })

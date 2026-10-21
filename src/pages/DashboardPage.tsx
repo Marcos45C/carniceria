@@ -11,10 +11,12 @@ import { useDemoCuts } from '../features/cuts/useDemoCuts'
 import type { Cut, CutFilters } from '../types/cut'
 import type { PriceChange } from '../types/pricing'
 import { formatPesos } from '../utils/format'
+import { useAuth } from '../features/auth/useAuth'
 
 type CutFormState = { mode: 'create' } | { mode: 'edit'; cut: Cut } | null
 
 export function DashboardPage() {
+  const { user, signOut } = useAuth()
   const { cuts, updatePrice, addCut, updateCut, applyBulkUpdate } = useDemoCuts()
   const [filters, setFilters] = useState<CutFilters>({
     search: '',
@@ -63,7 +65,12 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader />
+      <AppHeader
+        email={user?.email}
+        onSignOut={() => {
+          void signOut()
+        }}
+      />
 
       <main className="mx-auto max-w-6xl space-y-4 px-4 py-4 pb-24">
         <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">

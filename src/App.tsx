@@ -1,5 +1,10 @@
-import { DashboardPage } from './pages/DashboardPage'
+import { AuthProvider } from './features/auth/AuthProvider'
+import { AppRoutes } from './routes/AppRoutes'
 
 export default function App() {
-  return <DashboardPage />
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
+  )
 }

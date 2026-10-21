@@ -72,3 +72,13 @@ const historyDelete = await call(`/rest/v1/price_history?cut_id=eq.${rows[0].id}
   method: 'DELETE',
 })
 report(historyDelete.status >= 400, `Borrar historial es rechazado (HTTP ${historyDelete.status})`)
+
+// 6. El registro público está deshabilitado.
+const signup = await call('/auth/v1/signup', {
+  method: 'POST',
+  body: JSON.stringify({
+    email: `intruso-${crypto.randomUUID()}@example.com`,
+    password: 'Cualquiera123!',
+  }),
+})
+report(signup.status >= 400, `El registro público está deshabilitado (HTTP ${signup.status})`)
