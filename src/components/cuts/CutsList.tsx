@@ -1,18 +1,18 @@
 import { Settings2 } from 'lucide-react'
 import type { Cut } from '../../types/cut'
-import { useInlinePriceEdit } from '../../features/cuts/useInlinePriceEdit'
+import { useInlinePriceEdit, type SavePrice } from '../../features/cuts/useInlinePriceEdit'
 import { formatDateTime, formatPesos } from '../../utils/format'
 import { PriceActions, PriceInput } from './PriceEditControls'
 
 interface CutItemProps {
   cut: Cut
-  onSavePrice: (id: string, newPrice: number) => void
+  onSavePrice: SavePrice
   onEditCut: (cut: Cut) => void
 }
 
 interface CutsListProps {
   cuts: Cut[]
-  onSavePrice: (id: string, newPrice: number) => void
+  onSavePrice: SavePrice
   onEditCut: (cut: Cut) => void
 }
 

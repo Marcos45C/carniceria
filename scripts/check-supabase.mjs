@@ -82,3 +82,51 @@ const signup = await call('/auth/v1/signup', {
   }),
 })
 report(signup.status >= 400, `El registro público está deshabilitado (HTTP ${signup.status})`)
+
+
+// 7. Sin sesión no se puede ejecutar la función de precios.
+const rpcAnonymous = await call('/rest/v1/rpc/set_cut_price', {
+  method: 'POST',
+  body: JSON.stringify({ p_cut_id: rows[0].id, p_new_price: 1 }),
+})
+report(rpcAnonymous.status >= 400, `Sin sesión no se puede cambiar un precio (HTTP ${rpcAnonymous.status})`)
+
+// 8. Con sesión, set_cut_price cambia el precio y registra el historial.
+const originalPrice = Number(rows[0].current_price)
+const testPrice = originalPrice + 1
+const change = await call('/rest/v1/rpc/set_cut_price', {
+  token,
+  method: 'POST',
+  body: JSON.stringify({
+    p_cut_id: rows[0].id,
+    p_new_price: testPrice,
+    p_expected_price: originalPrice,
+  }),
+})
+const changed = Array.isArray(change.body) ? change.body[0] : change.body
+report(
+  change.status === 200 && Number(changed?.current_price) === testPrice,
+  `set_cut_price actualiza el precio (HTTP ${change.status})`,
+)
+
+const history = await call(
+  `/rest/v1/price_history?cut_id=eq.${rows[0].id}&change_type=eq.individual&select=old_price,new_price&order=changed_at.desc&limit=1`,
+  { token },
+)
+const lastChange = Array.isArray(history.body) ? history.body[0] : undefined
+report(
+  Number(lastChange?.new_price) === testPrice && Number(lastChange?.old_price) === originalPrice,
+  'El cambio quedó registrado en el historial',
+)
+
+// 9. Se restaura el precio original (queda otro registro en el historial).
+const restore = await call('/rest/v1/rpc/set_cut_price', {
+  token,
+  method: 'POST',
+  body: JSON.stringify({
+    p_cut_id: rows[0].id,
+    p_new_price: originalPrice,
+    p_expected_price: testPrice,
+  }),
+})
+report(restore.status === 200, `Se restauró el precio original (HTTP ${restore.status})`)

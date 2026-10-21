@@ -20,3 +20,19 @@ export interface CutFilters {
   category: string
   status: StatusFilter
 }
+
+export interface NewCutInput {
+  name: string
+  category: string | null
+  unit: CutUnit
+  /** Precio en pesos, con hasta dos decimales. */
+  price: number
+  isActive: boolean
+}
+
+export interface CutDetailsInput {
+  name: string
+  category: string | null
+  unit: CutUnit
+  isActive: boolean
+}

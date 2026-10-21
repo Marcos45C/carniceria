@@ -1,10 +1,7 @@
-import type { Cut } from '../../types/cut'
+import type { Cut } from '../types/cut'
 
-/**
- * DATOS DE DEMOSTRACIÓN: todos los cortes y precios de este archivo son
- * ficticios. No representan precios reales de ninguna carnicería.
- */
-export const DEMO_CUTS: Cut[] = [
+/** Cortes ficticios para las pruebas automatizadas. */
+export const FIXTURE_CUTS: Cut[] = [
   { id: 'demo-01', name: 'Asado de tira', category: 'Vacuno', unit: 'kg', price: 12500, priceUpdatedAt: '2026-10-14T13:20:00Z', isActive: true },
   { id: 'demo-02', name: 'Vacío', category: 'Vacuno', unit: 'kg', price: 13800, priceUpdatedAt: '2026-10-14T13:20:00Z', isActive: true },
   { id: 'demo-03', name: 'Bife de chorizo', category: 'Vacuno', unit: 'kg', price: 15200, priceUpdatedAt: '2026-10-09T12:05:00Z', isActive: true },

@@ -11,8 +11,16 @@ const authMocks = vi.hoisted(() => ({
   signOut: vi.fn(),
 }))
 
-// Reemplaza el acceso real a Supabase: estas pruebas no necesitan servidor.
+const cutsMocks = vi.hoisted(() => ({
+  fetchCuts: vi.fn(),
+  createCut: vi.fn(),
+  updateCutDetails: vi.fn(),
+  setCutPrice: vi.fn(),
+}))
+
+// Reemplazan el acceso real a Supabase: estas pruebas no necesitan servidor.
 vi.mock('./features/auth/authService', () => authMocks)
+vi.mock('./features/cuts/cutsService', () => cutsMocks)
 
 const demoSession = {
   user: { id: 'user-1', email: 'carnicero@demo.local' },
@@ -40,6 +48,7 @@ function renderApp(path: string) {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  cutsMocks.fetchCuts.mockResolvedValue({ ok: true, data: [] })
   authMocks.signOut.mockImplementation(async () => {
     emitSession(null)
   })
@@ -109,6 +118,7 @@ describe('pantalla de login', () => {
     await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos.')
+    expect(authMocks.signInWithPassword).toHaveBeenCalledTimes(1)
   })
 
   it('inicia sesión y muestra el dashboard', async () => {

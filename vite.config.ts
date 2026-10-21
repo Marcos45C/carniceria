@@ -9,7 +9,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     env: {
-      VITE_SUPABASE_URL: 'http://127.0.0.1:54321',
+      // Dirección inexistente a propósito: las pruebas nunca deben llegar a un servidor real.
+      VITE_SUPABASE_URL: 'http://supabase.invalid',
       VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test_key',
     },
   },

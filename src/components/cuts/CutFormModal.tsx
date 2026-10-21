@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { Loader2 } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { btnPrimary, btnSecondary, inputClass } from '../ui/styles'
 import type { Cut, CutUnit } from '../../types/cut'
+import type { Result } from '../../types/result'
 import {
   validateCutForm,
   type CutFormErrors,
@@ -15,7 +17,8 @@ interface CutFormModalProps {
   cut?: Cut
   cuts: Cut[]
   categories: string[]
-  onSubmit: (data: ValidCutData) => void
+  /** Debe devolver el resultado del servidor. El padre cierra el modal si salió bien. */
+  onSubmit: (data: ValidCutData) => Promise<Result<Cut>>
   onClose: () => void
 }
 
@@ -38,22 +41,41 @@ export function CutFormModal({ mode, cut, cuts, categories, onSubmit, onClose }:
     isActive: cut?.isActive ?? true,
   })
   const [errors, setErrors] = useState<CutFormErrors>({})
+  const [formError, setFormError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   function setValue<K extends keyof CutFormValues>(key: K, value: CutFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }))
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const result = validateCutForm(values, cuts, {
+    if (submitting) return // evita envíos duplicados
+
+    const validation = validateCutForm(values, cuts, {
       editingId: cut?.id,
       requirePrice: isCreate,
     })
-    if (!result.ok) {
-      setErrors(result.errors)
+    if (!validation.ok) {
+      setErrors(validation.errors)
+      setFormError(null)
       return
     }
-    onSubmit(result.data)
+
+    setErrors({})
+    setFormError(null)
+    setSubmitting(true)
+    try {
+      const result = await onSubmit(validation.data)
+      if (!result.ok) {
+        if (result.code === '23505') setErrors({ name: result.message })
+        else setFormError(result.message)
+        setSubmitting(false)
+      }
+    } catch {
+      setFormError('Ocurrió un error inesperado. Intentá de nuevo.')
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -62,16 +84,26 @@ export function CutFormModal({ mode, cut, cuts, categories, onSubmit, onClose }:
       onClose={onClose}
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button type="button" onClick={onClose} className={btnSecondary}>
+          <button type="button" onClick={onClose} disabled={submitting} className={btnSecondary}>
             Cancelar
           </button>
-          <button type="submit" form="cut-form" className={btnPrimary}>
-            {isCreate ? 'Agregar corte' : 'Guardar cambios'}
+          <button type="submit" form="cut-form" disabled={submitting} className={btnPrimary}>
+            {submitting && <Loader2 size={18} className="animate-spin" aria-hidden="true" />}
+            {submitting ? 'Guardando…' : isCreate ? 'Agregar corte' : 'Guardar cambios'}
           </button>
         </div>
       }
     >
       <form id="cut-form" onSubmit={handleSubmit} noValidate className="space-y-4">
+        {formError && (
+          <p
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-error-600"
+          >
+            {formError}
+          </p>
+        )}
+
         <div>
           <label htmlFor="cut-name" className="mb-1 block font-semibold">
             Nombre

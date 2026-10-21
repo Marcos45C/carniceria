@@ -1,4 +1,4 @@
-import { Check, Pencil, X } from 'lucide-react'
+import { Check, Loader2, Pencil, X } from 'lucide-react'
 import type { InlinePriceEdit } from '../../features/cuts/useInlinePriceEdit'
 import { btnSecondary, btnSuccess } from '../ui/styles'
 
@@ -14,18 +14,19 @@ export function PriceInput({ edit, cutName }: PriceInputProps) {
         type="text"
         inputMode="decimal"
         autoFocus
+        disabled={edit.saving}
         value={edit.value}
         onChange={(event) => edit.changeValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {
             event.preventDefault()
-            edit.submit()
+            void edit.submit()
           }
           if (event.key === 'Escape') edit.cancel()
         }}
         aria-label={`Nuevo precio de ${cutName}`}
         aria-invalid={edit.error !== null}
-        className={`h-12 w-full rounded-lg border bg-white px-3 text-lg tabular-nums focus:outline-none focus:ring-2 ${
+        className={`h-12 w-full rounded-lg border bg-white px-3 text-lg tabular-nums focus:outline-none focus:ring-2 disabled:bg-gray-100 ${
           edit.error
             ? 'border-error-600 focus:ring-error-600'
             : 'border-gray-300 focus:ring-brand-500'
@@ -54,11 +55,25 @@ export function PriceActions({ edit, cutName, fullWidth = false, className = '' 
   if (edit.editing) {
     return (
       <div className={wrapper}>
-        <button type="button" onClick={edit.submit} className={`${btnSuccess} ${grow}`}>
-          <Check size={18} aria-hidden="true" />
-          Guardar
+        <button
+          type="button"
+          onClick={() => void edit.submit()}
+          disabled={edit.saving}
+          className={`${btnSuccess} ${grow}`}
+        >
+          {edit.saving ? (
+            <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Check size={18} aria-hidden="true" />
+          )}
+          {edit.saving ? 'Guardando…' : 'Guardar'}
         </button>
-        <button type="button" onClick={edit.cancel} className={`${btnSecondary} ${grow}`}>
+        <button
+          type="button"
+          onClick={edit.cancel}
+          disabled={edit.saving}
+          className={`${btnSecondary} ${grow}`}
+        >
           <X size={18} aria-hidden="true" />
           Cancelar
         </button>

@@ -16,7 +16,8 @@
     "db:status": "supabase status",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "db:check": "node --env-file=.env.local scripts/check-supabase.mjs"
+    "db:check": "node --env-file=.env.local scripts/check-supabase.mjs",
+    "db:types": "supabase gen types typescript --local > src/types/database.types.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
