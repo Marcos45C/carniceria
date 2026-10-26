@@ -10,11 +10,14 @@ export function toFriendlyDbMessage(error: DbErrorLike): string {
       return 'Ya existe un corte con ese nombre.'
     case 'PT409':
       return 'El precio de este corte cambió mientras lo editabas. Se actualizó la lista: revisá el precio e intentá de nuevo.'
+    case 'PT412':
+      return 'Los precios cambiaron desde que se calculó la vista previa. Se actualizó la lista: volvé a calcular.'
     case 'PT404':
     case 'PGRST116':
       return 'No se encontró el corte. Actualizá la lista e intentá de nuevo.'
     case '22023':
-      return 'El precio no es válido.'
+      // Estos mensajes los escribimos nosotros en la base y ya son comprensibles.
+      return error.message || 'Los datos no son válidos.'
     case '23514':
       return 'Algún dato no es válido. Revisá el formulario.'
     case '42501':

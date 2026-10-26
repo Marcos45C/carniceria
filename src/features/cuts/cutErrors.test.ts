@@ -12,6 +12,16 @@ describe('toFriendlyDbMessage', () => {
     expect(toFriendlyDbMessage({ code: 'PT409', message: 'x' })).toMatch(/cambió/)
   })
 
+  it('traduce la vista previa desactualizada', () => {
+    expect(toFriendlyDbMessage({ code: 'PT412', message: 'x' })).toMatch(/vista previa/)
+  })
+
+  it('muestra los mensajes de validación de la base', () => {
+    expect(
+      toFriendlyDbMessage({ code: '22023', message: 'El porcentaje no es válido.' }),
+    ).toBe('El porcentaje no es válido.')
+  })
+
   it('traduce corte inexistente', () => {
     expect(toFriendlyDbMessage({ code: 'PT404', message: 'x' })).toMatch(/No se encontró/)
   })

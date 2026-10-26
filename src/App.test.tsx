@@ -16,6 +16,7 @@ const cutsMocks = vi.hoisted(() => ({
   createCut: vi.fn(),
   updateCutDetails: vi.fn(),
   setCutPrice: vi.fn(),
+  applyBulkUpdate: vi.fn(),
 }))
 
 // Reemplazan el acceso real a Supabase: estas pruebas no necesitan servidor.

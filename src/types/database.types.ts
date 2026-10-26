@@ -89,7 +89,30 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "create_cut":
+            "apply_bulk_price_update":
+{ Args: { "p_expected": Json,"p_percentage": number,"p_request_id": string,"p_rounding_mode": string,"p_scope": string }; Returns: {
+              "affected_count": number,
+"changed_by": string,
+"created_at": string,
+"id": string,
+"operation_type": string,
+"original_batch_id": string | null,
+"owner_id": string,
+"percentage": number | null,
+"request_id": string | null,
+"rounding_mode": string | null,
+"selection_scope": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "price_change_batches"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"calculate_new_price":
+{ Args: { "p_percentage": number,"p_price": number,"p_rounding": string }; Returns: number
+                           },
+"create_cut":
 { Args: { "p_category": string,"p_is_active"?: boolean,"p_name": string,"p_price": number,"p_unit": string }; Returns: {
               "category": string | null,
 "created_at": string,

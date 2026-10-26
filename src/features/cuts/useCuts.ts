@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Cut, CutDetailsInput, NewCutInput } from '../../types/cut'
+import type { BulkUpdateOutcome, BulkUpdateRequest } from '../../types/pricing'
 import type { Result } from '../../types/result'
-import { createCut, fetchCuts, setCutPrice, updateCutDetails } from './cutsService'
+import {
+  applyBulkUpdate,
+  createCut,
+  fetchCuts,
+  setCutPrice,
+  updateCutDetails,
+} from './cutsService'
 
 export type LoadStatus = 'loading' | 'ready' | 'error'
 
@@ -73,5 +80,18 @@ export function useCuts() {
     [replaceCut],
   )
 
-  return { cuts, status, loadError, retry, savePrice, addCut, updateCut }
+  /**
+   * Aplica una actualización masiva y recarga los cortes antes de devolver
+   * el resultado, así la vista previa se recalcula con datos frescos.
+   */
+  const applyBulk = useCallback(
+    async (request: BulkUpdateRequest): Promise<Result<BulkUpdateOutcome>> => {
+      const result = await applyBulkUpdate(request)
+      if (result.ok || result.code === 'PT412') await refresh()
+      return result
+    },
+    [refresh],
+  )
+
+  return { cuts, status, loadError, retry, savePrice, addCut, updateCut, applyBulk }
 }

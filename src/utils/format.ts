@@ -35,3 +35,15 @@ export function formatPercentage(basisPoints: number): string {
 export function formatDateTime(iso: string): string {
   return dateTime.format(new Date(iso))
 }
+
+
+const variation = new Intl.NumberFormat('es-AR', {
+  maximumFractionDigits: 2,
+  signDisplay: 'exceptZero',
+})
+
+/** Variación porcentual entre dos precios. Ejemplo: 12500 -> 13750 = "+10%". */
+export function formatVariation(oldPrice: number | null, newPrice: number): string {
+  if (oldPrice === null || oldPrice === 0) return '—'
+  return `${variation.format(((newPrice - oldPrice) / oldPrice) * 100)}%`
+}

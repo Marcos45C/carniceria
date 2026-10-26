@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase'
 import type { Cut, CutDetailsInput, NewCutInput } from '../../types/cut'
 import type { Database } from '../../types/database.types'
+import type { BulkUpdateOutcome, BulkUpdateRequest } from '../../types/pricing'
 import type { Result } from '../../types/result'
 import { toFriendlyDbMessage } from './cutErrors'
 
@@ -79,4 +80,25 @@ export async function setCutPrice(
   })
   if (error) return failure(error)
   return { ok: true, data: toCut(data) }
+}
+
+/**
+ * Aplica una actualización masiva. El servidor revalida todo: si los precios
+ * ya no coinciden con los de la vista previa, rechaza con el código PT412.
+ */
+export async function applyBulkUpdate(
+  request: BulkUpdateRequest,
+): Promise<Result<BulkUpdateOutcome>> {
+  const signedBasisPoints =
+    request.operation === 'increase' ? request.basisPoints : -request.basisPoints
+
+  const { data, error } = await supabase.rpc('apply_bulk_price_update', {
+    p_request_id: request.requestId,
+    p_scope: request.scope,
+    p_percentage: signedBasisPoints / 100,
+    p_rounding_mode: request.rounding,
+    p_expected: request.expected.map((item) => ({ id: item.id, price: item.price })),
+  })
+  if (error) return failure(error)
+  return { ok: true, data: { batchId: data.id, affectedCount: data.affected_count } }
 }

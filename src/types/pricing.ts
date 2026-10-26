@@ -18,3 +18,19 @@ export interface PriceChange {
   cutId: string
   newPrice: number
 }
+export interface BulkUpdateRequest {
+  /** Clave de idempotencia: reenviar la misma solicitud no la aplica dos veces. */
+  requestId: string
+  scope: SelectionScope
+  operation: PriceOperation
+  /** Centésimas de punto porcentual: 7,5 % -> 750. */
+  basisPoints: number
+  rounding: RoundingMode
+  /** Precios que el usuario vio al calcular la vista previa. */
+  expected: { id: string; price: number }[]
+}
+
+export interface BulkUpdateOutcome {
+  batchId: string
+  affectedCount: number
+}

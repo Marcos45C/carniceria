@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react'
-import { ArrowLeft, TrendingDown, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Loader2, TrendingDown, TrendingUp } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { btnPrimary, btnSecondary, inputBase, inputClass } from '../ui/styles'
 import type { Cut } from '../../types/cut'
 import type {
-  PriceChange,
-  PriceOperation,
+  BulkUpdateOutcome,
+  BulkUpdateRequest,
   PreviewRow,
+  PriceOperation,
   RoundingMode,
   SelectionScope,
 } from '../../types/pricing'
+import type { Result } from '../../types/result'
 import {
   buildPreview,
   parsePercentage,
@@ -17,10 +19,12 @@ import {
   ROUNDING_MODES,
 } from '../../utils/pricing'
 import { formatPercentage, formatPesos, formatPesosSigned } from '../../utils/format'
+import { newUuid } from '../../utils/uuid'
 
 interface BulkUpdateModalProps {
   cuts: Cut[]
-  onApply: (changes: PriceChange[], summary: string) => void
+  /** Debe devolver el resultado del servidor. El padre cierra el modal si salió bien. */
+  onApply: (request: BulkUpdateRequest) => Promise<Result<BulkUpdateOutcome>>
   onClose: () => void
 }
 
@@ -29,6 +33,9 @@ interface PreviewState {
   basisPoints: number
   operation: PriceOperation
   rounding: RoundingMode
+  scope: SelectionScope
+  /** Se genera con cada vista previa y se reutiliza si se reintenta el envío. */
+  requestId: string
 }
 
 export function BulkUpdateModal({ cuts, onApply, onClose }: BulkUpdateModalProps) {
@@ -49,23 +56,20 @@ export function BulkUpdateModal({ cuts, onApply, onClose }: BulkUpdateModalProps
   const [percentageError, setPercentageError] = useState<string | null>(null)
   const [selectionError, setSelectionError] = useState<string | null>(null)
   const [preview, setPreview] = useState<PreviewState | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [applyError, setApplyError] = useState<string | null>(null)
+  const [stale, setStale] = useState(false)
 
-  const changes = useMemo<PriceChange[]>(() => {
-    if (!preview) return []
-    return preview.rows.flatMap((row) =>
-      row.newPrice !== null && row.newPrice !== row.oldPrice
-        ? [{ cutId: row.cutId, newPrice: row.newPrice }]
-        : [],
-    )
-  }, [preview])
-
+  const changedCount = preview
+    ? preview.rows.filter((row) => row.newPrice !== null && row.newPrice !== row.oldPrice).length
+    : 0
   const invalidCount = preview ? preview.rows.filter((row) => row.newPrice === null).length : 0
-  const unchangedCount = preview ? preview.rows.length - changes.length - invalidCount : 0
-  const canConfirm = preview !== null && invalidCount === 0 && changes.length > 0
+  const unchangedCount = preview ? preview.rows.length - changedCount - invalidCount : 0
+  const canConfirm = preview !== null && invalidCount === 0 && changedCount > 0 && !submitting
 
   function toggleCut(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
+    setSelectedIds((previous) => {
+      const next = new Set(previous)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
@@ -89,18 +93,43 @@ export function BulkUpdateModal({ cuts, onApply, onClose }: BulkUpdateModalProps
     }
     setPercentageError(null)
     setSelectionError(null)
+    setApplyError(null)
+    setStale(false)
     setPreview({
       rows: buildPreview(targets, parsed.value, operation, rounding),
       basisPoints: parsed.value,
       operation,
       rounding,
+      scope,
+      requestId: newUuid(),
     })
   }
 
-  function handleConfirm() {
-    if (!preview || !canConfirm) return
-    const label = preview.operation === 'increase' ? 'Aumento' : 'Reducción'
-    onApply(changes, `${label} del ${formatPercentage(preview.basisPoints)}`)
+  async function handleConfirm() {
+    if (!preview || !canConfirm) return // evita envíos duplicados
+    setSubmitting(true)
+    setApplyError(null)
+    setStale(false)
+    try {
+      const result = await onApply({
+        requestId: preview.requestId,
+        scope: preview.scope,
+        operation: preview.operation,
+        basisPoints: preview.basisPoints,
+        rounding: preview.rounding,
+        // Los precios que el usuario vio: el servidor los compara con los reales.
+        expected: preview.rows.map((row) => ({ id: row.cutId, price: row.oldPrice })),
+      })
+      if (!result.ok) {
+        if (result.code === 'PT412') setStale(true)
+        setApplyError(result.message)
+        setSubmitting(false)
+      }
+      // Si salió bien, el padre cierra el modal.
+    } catch {
+      setApplyError('Ocurrió un error inesperado. Intentá de nuevo.')
+      setSubmitting(false)
+    }
   }
 
   if (preview) {
@@ -112,19 +141,32 @@ export function BulkUpdateModal({ cuts, onApply, onClose }: BulkUpdateModalProps
         wide
         footer={
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} className={btnSecondary}>
+            <button type="button" onClick={onClose} disabled={submitting} className={btnSecondary}>
               Cancelar
             </button>
-            <button type="button" onClick={handleConfirm} disabled={!canConfirm} className={btnPrimary}>
-              Confirmar actualización
+            <button
+              type="button"
+              onClick={() => {
+                void handleConfirm()
+              }}
+              disabled={!canConfirm}
+              className={btnPrimary}
+            >
+              {submitting && <Loader2 size={18} className="animate-spin" aria-hidden="true" />}
+              {submitting ? 'Aplicando…' : 'Confirmar actualización'}
             </button>
           </div>
         }
       >
         <button
           type="button"
-          onClick={() => setPreview(null)}
-          className="mb-3 inline-flex min-h-11 items-center gap-2 font-semibold text-brand-700 hover:underline"
+          onClick={() => {
+            setPreview(null)
+            setApplyError(null)
+            setStale(false)
+          }}
+          disabled={submitting}
+          className="mb-3 inline-flex min-h-11 items-center gap-2 font-semibold text-brand-700 hover:underline disabled:opacity-50"
         >
           <ArrowLeft size={18} aria-hidden="true" />
           Cambiar configuración
@@ -141,7 +183,7 @@ export function BulkUpdateModal({ cuts, onApply, onClose }: BulkUpdateModalProps
           </div>
           <div>
             <dt className="text-gray-600">Cortes afectados</dt>
-            <dd className="font-semibold">{changes.length}</dd>
+            <dd className="font-semibold">{changedCount}</dd>
           </div>
           <div>
             <dt className="text-gray-600">Redondeo</dt>
@@ -149,8 +191,19 @@ export function BulkUpdateModal({ cuts, onApply, onClose }: BulkUpdateModalProps
           </div>
         </dl>
 
+        {applyError && (
+          <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-error-600">
+            <p>{applyError}</p>
+            {stale && (
+              <button type="button" onClick={handlePreview} className={`${btnSecondary} mt-2`}>
+                Calcular de nuevo
+              </button>
+            )}
+          </div>
+        )}
+
         {invalidCount > 0 && (
-          <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-error-600">
+          <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-error-600">
             {invalidCount === 1
               ? 'Hay 1 corte cuyo precio nuevo no sería válido (cero o negativo).'
               : `Hay ${invalidCount} cortes cuyo precio nuevo no sería válido (cero o negativo).`}{' '}

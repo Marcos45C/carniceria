@@ -1,28 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Plus, RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw } from 'lucide-react'
 import { AppHeader } from '../components/layout/AppHeader'
 import { CutsToolbar } from '../components/cuts/CutsToolbar'
 import { CutsList } from '../components/cuts/CutsList'
 import { CutFormModal } from '../components/cuts/CutFormModal'
+import { BulkUpdateModal } from '../components/pricing/BulkUpdateModal'
+import { ErrorBox, LoadingBox } from '../components/ui/StateBoxes'
 import { btnPrimary, btnSecondary } from '../components/ui/styles'
 import { useAuth } from '../features/auth/useAuth'
 import { filterCuts, getCategories, type ValidCutData } from '../features/cuts/cutRules'
 import { useCuts } from '../features/cuts/useCuts'
 import type { Cut, CutFilters } from '../types/cut'
+import type { BulkUpdateOutcome, BulkUpdateRequest } from '../types/pricing'
 import type { Result } from '../types/result'
-import { formatPesos } from '../utils/format'
+import { formatPercentage, formatPesos } from '../utils/format'
 
 type CutFormState = { mode: 'create' } | { mode: 'edit'; cut: Cut } | null
 
 export function DashboardPage() {
   const { user, signOut } = useAuth()
-  const { cuts, status, loadError, retry, savePrice, addCut, updateCut } = useCuts()
+  const { cuts, status, loadError, retry, savePrice, addCut, updateCut, applyBulk } = useCuts()
   const [filters, setFilters] = useState<CutFilters>({
     search: '',
     category: '',
     status: 'active',
   })
   const [cutForm, setCutForm] = useState<CutFormState>(null)
+  const [bulkOpen, setBulkOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
   const visibleCuts = useMemo(() => filterCuts(cuts, filters), [cuts, filters])
@@ -74,6 +78,21 @@ export function DashboardPage() {
     return result
   }
 
+  async function handleBulkApply(request: BulkUpdateRequest): Promise<Result<BulkUpdateOutcome>> {
+    const result = await applyBulk(request)
+    if (result.ok) {
+      setBulkOpen(false)
+      const label = request.operation === 'increase' ? 'Aumento' : 'Reducción'
+      const count = result.data.affectedCount
+      setNotice(
+        `${label} del ${formatPercentage(request.basisPoints)}: ${count} ${
+          count === 1 ? 'corte actualizado' : 'cortes actualizados'
+        }.`,
+      )
+    }
+    return result
+  }
+
   return (
     <div className="min-h-screen">
       <AppHeader
@@ -87,8 +106,8 @@ export function DashboardPage() {
         <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
           <button
             type="button"
-            disabled
-            title="Disponible próximamente"
+            onClick={() => setBulkOpen(true)}
+            disabled={status !== 'ready'}
             className={`${btnPrimary} py-4 text-lg`}
           >
             <RefreshCw size={22} aria-hidden="true" />
@@ -104,34 +123,17 @@ export function DashboardPage() {
             Agregar corte
           </button>
         </div>
-        <p className="-mt-2 text-sm text-gray-600">
-          La actualización masiva de precios se activa en la próxima etapa.
-        </p>
 
-        {status === 'loading' && (
-          <div
-            role="status"
-            className="flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white p-8 text-gray-700"
-          >
-            <Loader2 className="animate-spin" size={22} aria-hidden="true" />
-            Cargando cortes…
-          </div>
-        )}
+        {status === 'loading' && <LoadingBox label="Cargando cortes…" />}
 
         {status === 'error' && (
-          <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4">
-            <p className="font-semibold text-error-600">No se pudieron cargar los cortes.</p>
-            {loadError && <p className="mt-1 text-sm text-gray-700">{loadError}</p>}
-            <button
-              type="button"
-              onClick={() => {
-                void retry()
-              }}
-              className={`${btnSecondary} mt-3`}
-            >
-              Reintentar
-            </button>
-          </div>
+          <ErrorBox
+            title="No se pudieron cargar los cortes."
+            message={loadError}
+            onRetry={() => {
+              void retry()
+            }}
+          />
         )}
 
         {status === 'ready' && (
@@ -151,6 +153,10 @@ export function DashboardPage() {
           </>
         )}
       </main>
+
+      {bulkOpen && (
+        <BulkUpdateModal cuts={cuts} onApply={handleBulkApply} onClose={() => setBulkOpen(false)} />
+      )}
 
       {cutForm && (
         <CutFormModal

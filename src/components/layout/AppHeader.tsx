@@ -1,10 +1,15 @@
 import { Beef, LogOut } from 'lucide-react'
+import { NavLink } from 'react-router'
 
 interface AppHeaderProps {
-  /** Se mostrará cuando exista autenticación (Etapa 4). */
   email?: string
   onSignOut?: () => void
 }
+
+const NAV_ITEMS = [
+  { to: '/', label: 'Precios', end: true },
+  { to: '/historial', label: 'Historial', end: false },
+]
 
 export function AppHeader({ email, onSignOut }: AppHeaderProps) {
   return (
@@ -28,6 +33,22 @@ export function AppHeader({ email, onSignOut }: AppHeaderProps) {
           )}
         </div>
       </div>
+      <nav aria-label="Secciones" className="mx-auto flex max-w-6xl gap-1 px-4 pb-2">
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) =>
+              `inline-flex min-h-10 items-center rounded-lg px-4 font-semibold ${
+                isActive ? 'bg-white text-brand-800' : 'text-white hover:bg-brand-800'
+              }`
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
     </header>
   )
 }
