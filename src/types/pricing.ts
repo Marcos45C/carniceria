@@ -34,3 +34,9 @@ export interface BulkUpdateOutcome {
   batchId: string
   affectedCount: number
 }
+
+export interface RevertRequest {
+  /** Clave de idempotencia: reenviar la misma solicitud no la aplica dos veces. */
+  requestId: string
+  batchId: string
+}

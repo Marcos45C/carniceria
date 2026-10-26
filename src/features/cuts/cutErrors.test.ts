@@ -22,7 +22,16 @@ describe('toFriendlyDbMessage', () => {
     ).toBe('El porcentaje no es válido.')
   })
 
-  it('traduce corte inexistente', () => {
+  it('muestra los mensajes de la reversión', () => {
+    expect(
+      toFriendlyDbMessage({ code: 'PT422', message: 'Algunos precios cambiaron después.' }),
+    ).toBe('Algunos precios cambiaron después.')
+    expect(
+      toFriendlyDbMessage({ code: 'PT410', message: 'Esta actualización ya fue revertida.' }),
+    ).toBe('Esta actualización ya fue revertida.')
+  })
+
+  it('traduce registros inexistentes', () => {
     expect(toFriendlyDbMessage({ code: 'PT404', message: 'x' })).toMatch(/No se encontró/)
   })
 

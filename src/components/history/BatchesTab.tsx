@@ -1,23 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { fetchBatchEntries, fetchBatchPage } from '../../features/history/historyService'
+import { describeBatch } from '../../features/history/labels'
 import { NO_FILTERS, usePagedList } from '../../features/history/usePagedList'
 import type { PriceBatch, PriceHistoryEntry } from '../../types/history'
 import type { Result } from '../../types/result'
-import { formatDateTime, formatPercentage } from '../../utils/format'
+import { formatDateTime } from '../../utils/format'
 import { ROUNDING_LABELS } from '../../utils/pricing'
 import { ErrorBox, LoadingBox } from '../ui/StateBoxes'
 import { btnSecondary } from '../ui/styles'
 import { HistoryEntriesList, type CurrentUser } from './HistoryEntriesList'
+import { RevertBatchModal } from './RevertBatchModal'
 
 interface Shared {
   cutNames: Map<string, string>
   currentUser: CurrentUser | null
-}
-
-function describeBatch(batch: PriceBatch): string {
-  if (batch.operationType === 'reversal') return 'Reversión de una actualización masiva'
-  const percentage = formatPercentage(Math.round(Math.abs(batch.percentage ?? 0) * 100))
-  return `${(batch.percentage ?? 0) >= 0 ? 'Aumento' : 'Reducción'} del ${percentage}`
 }
 
 interface BatchEntriesState {
@@ -59,14 +56,27 @@ function BatchEntries({ batchId, cutNames, currentUser }: Shared & { batchId: st
   return <HistoryEntriesList entries={entries} cutNames={cutNames} currentUser={currentUser} />
 }
 
-function BatchCard({ batch, cutNames, currentUser }: Shared & { batch: PriceBatch }) {
+interface BatchCardProps extends Shared {
+  batch: PriceBatch
+  reverted: boolean
+  onRevert: (batch: PriceBatch) => void
+}
+
+function BatchCard({ batch, reverted, onRevert, cutNames, currentUser }: BatchCardProps) {
   const [open, setOpen] = useState(false)
 
   return (
     <li className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-semibold">{describeBatch(batch)}</h3>
+          <h3 className="font-semibold">
+            {describeBatch(batch)}
+            {reverted && (
+              <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">
+                Revertida
+              </span>
+            )}
+          </h3>
           <p className="text-sm text-gray-600">
             {formatDateTime(batch.createdAt)} · {batch.affectedCount}{' '}
             {batch.affectedCount === 1 ? 'corte modificado' : 'cortes modificados'}
@@ -81,14 +91,21 @@ function BatchCard({ batch, cutNames, currentUser }: Shared & { batch: PriceBatc
           )}
           <p className="text-xs text-gray-500">Operación {batch.id.slice(0, 8)}</p>
         </div>
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen((previous) => !previous)}
-          className={btnSecondary}
-        >
-          {open ? 'Ocultar cortes' : 'Ver cortes modificados'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={() => setOpen((previous) => !previous)}
+            className={btnSecondary}
+          >
+            {open ? 'Ocultar cortes' : 'Ver cortes modificados'}
+          </button>
+          {batch.operationType === 'bulk_update' && !reverted && (
+            <button type="button" onClick={() => onRevert(batch)} className={btnSecondary}>
+              Revertir
+            </button>
+          )}
+        </div>
       </div>
 
       {open && (
@@ -102,45 +119,103 @@ function BatchCard({ batch, cutNames, currentUser }: Shared & { batch: PriceBatc
 
 export function BatchesTab({ cutNames, currentUser }: Shared) {
   const list = usePagedList(NO_FILTERS, fetchBatchPage)
+  const [reverting, setReverting] = useState<PriceBatch | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
-  if (list.loading) return <LoadingBox label="Cargando operaciones…" />
+  useEffect(() => {
+    if (!notice) return
+    const timer = setTimeout(() => setNotice(null), 5000)
+    return () => clearTimeout(timer)
+  }, [notice])
+
+  // Una reversión siempre es más nueva que la actualización que revierte,
+  // así que aparece antes en la lista ordenada por fecha descendente.
+  const revertedIds = useMemo(
+    () =>
+      new Set(
+        list.items.flatMap((batch) => (batch.originalBatchId ? [batch.originalBatchId] : [])),
+      ),
+    [list.items],
+  )
+
+  let content: ReactNode
   if (list.error) {
-    return (
+    content = (
       <ErrorBox title="No se pudieron cargar las operaciones." message={list.error} onRetry={list.reload} />
     )
-  }
-  if (list.items.length === 0) {
-    return (
+  } else if (list.loading && list.items.length === 0) {
+    content = <LoadingBox label="Cargando operaciones…" />
+  } else if (list.items.length === 0) {
+    content = (
       <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-600">
         Todavía no hay actualizaciones masivas.
+      </div>
+    )
+  } else {
+    content = (
+      <div className="space-y-4">
+        <ul className="space-y-3">
+          {list.items.map((batch) => (
+            <BatchCard
+              key={batch.id}
+              batch={batch}
+              reverted={revertedIds.has(batch.id)}
+              onRevert={setReverting}
+              cutNames={cutNames}
+              currentUser={currentUser}
+            />
+          ))}
+        </ul>
+        {list.moreError && (
+          <p role="alert" className="text-sm text-error-600">
+            {list.moreError}
+          </p>
+        )}
+        {list.items.length < list.total && (
+          <button
+            type="button"
+            onClick={() => {
+              void list.loadMore()
+            }}
+            disabled={list.loadingMore}
+            className={`${btnSecondary} w-full`}
+          >
+            {list.loadingMore ? 'Cargando…' : 'Cargar más'}
+          </button>
+        )}
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <ul className="space-y-3">
-        {list.items.map((batch) => (
-          <BatchCard key={batch.id} batch={batch} cutNames={cutNames} currentUser={currentUser} />
-        ))}
-      </ul>
-      {list.moreError && (
-        <p role="alert" className="text-sm text-error-600">
-          {list.moreError}
-        </p>
-      )}
-      {list.items.length < list.total && (
-        <button
-          type="button"
-          onClick={() => {
-            void list.loadMore()
+    <>
+      {content}
+
+      {reverting && (
+        <RevertBatchModal
+          batch={reverting}
+          onClose={() => setReverting(null)}
+          onStale={list.reload}
+          onReverted={(outcome) => {
+            setReverting(null)
+            setNotice(
+              `Se revirtió la actualización: ${outcome.affectedCount} ${
+                outcome.affectedCount === 1 ? 'corte restaurado' : 'cortes restaurados'
+              }.`,
+            )
+            list.reload()
           }}
-          disabled={list.loadingMore}
-          className={`${btnSecondary} w-full`}
-        >
-          {list.loadingMore ? 'Cargando…' : 'Cargar más'}
-        </button>
+        />
       )}
-    </div>
+
+      {notice && (
+        <div
+          role="status"
+          className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-md rounded-lg bg-ok-600 px-4 py-3 font-medium text-white shadow-lg"
+        >
+          {notice}
+        </div>
+      )}
+    </>
   )
 }

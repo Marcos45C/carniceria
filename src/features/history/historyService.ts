@@ -6,7 +6,12 @@ import type {
   PriceHistoryEntry,
 } from '../../types/history'
 import type { Database } from '../../types/database.types'
-import type { RoundingMode, SelectionScope } from '../../types/pricing'
+import type {
+  BulkUpdateOutcome,
+  RevertRequest,
+  RoundingMode,
+  SelectionScope,
+} from '../../types/pricing'
 import type { Result } from '../../types/result'
 import { endOfDayIso, startOfDayIso } from '../../utils/dateRange'
 import { ROUNDING_MODES } from '../../utils/pricing'
@@ -114,4 +119,18 @@ export async function fetchBatchEntries(batchId: string): Promise<Result<PriceHi
 
   if (error) return failure(error)
   return { ok: true, data: data.map(toEntry) }
+}
+
+
+/**
+ * Revierte una actualización masiva. El servidor comprueba que ningún precio
+ * haya cambiado después; si cambió alguno, rechaza todo (PT422).
+ */
+export async function revertBatch(request: RevertRequest): Promise<Result<BulkUpdateOutcome>> {
+  const { data, error } = await supabase.rpc('revert_bulk_price_update', {
+    p_request_id: request.requestId,
+    p_batch_id: request.batchId,
+  })
+  if (error) return failure(error)
+  return { ok: true, data: { batchId: data.id, affectedCount: data.affected_count } }
 }

@@ -14,8 +14,10 @@ export function toFriendlyDbMessage(error: DbErrorLike): string {
       return 'Los precios cambiaron desde que se calculó la vista previa. Se actualizó la lista: volvé a calcular.'
     case 'PT404':
     case 'PGRST116':
-      return 'No se encontró el corte. Actualizá la lista e intentá de nuevo.'
+      return 'No se encontró el registro. Actualizá la pantalla e intentá de nuevo.'
     case '22023':
+    case 'PT422':
+    case 'PT410':
       // Estos mensajes los escribimos nosotros en la base y ya son comprensibles.
       return error.message || 'Los datos no son válidos.'
     case '23514':

@@ -131,6 +131,26 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"revert_bulk_price_update":
+{ Args: { "p_batch_id": string,"p_request_id": string }; Returns: {
+              "affected_count": number,
+"changed_by": string,
+"created_at": string,
+"id": string,
+"operation_type": string,
+"original_batch_id": string | null,
+"owner_id": string,
+"percentage": number | null,
+"request_id": string | null,
+"rounding_mode": string | null,
+"selection_scope": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "price_change_batches"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "set_cut_price":
 { Args: { "p_cut_id": string,"p_expected_price"?: number,"p_new_price": number }; Returns: {
               "category": string | null,

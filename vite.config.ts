@@ -13,5 +13,17 @@ export default defineConfig({
       VITE_SUPABASE_URL: 'http://supabase.invalid',
       VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test_key',
     },
+      coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/test/**',
+        'src/types/database.types.ts',
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+      ],
+      reporter: ['text-summary', 'html'],
+    },
   },
 })
