@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@12.4.2",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -18,7 +19,10 @@
     "db:test": "supabase test db",
     "db:check": "node --env-file=.env.local scripts/check-supabase.mjs",
     "db:types": "supabase gen types typescript --local > src/types/database.types.ts",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "docker:dev": "docker compose up --build web",
+    "docker:test": "docker compose run --rm --build test",
+    "docker:preview": "docker compose --env-file .env.local --profile preview up --build preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

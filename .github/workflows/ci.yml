@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend (lint, tipos, pruebas y build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Toma la versión de pnpm del campo "packageManager" de package.json
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  database:
+    name: Base de datos (migraciones, pgTAP y tipos)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Levanta Supabase local: aplica las migraciones y el seed desde cero.
+      - name: Iniciar Supabase local
+        run: pnpm exec supabase start
+
+      - name: Pruebas de base de datos (pgTAP)
+        run: pnpm db:test
+
+      # Si cambiaste una migración y olvidaste regenerar los tipos, falla acá.
+      - name: Verificar que los tipos generados estén al día
+        run: |
+          pnpm db:types
+          git diff --exit-code src/types/database.types.ts
+
+  audit:
+    name: Auditoría de dependencias
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Informativo: una vulnerabilidad en una dependencia externa no bloquea el trabajo.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm audit --prod --audit-level=high
