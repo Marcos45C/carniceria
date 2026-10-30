@@ -1,5 +1,6 @@
 import { Beef, LogOut } from 'lucide-react'
 import { NavLink } from 'react-router'
+import { TextSizeControl } from '../ui/TextSizeControl'
 
 interface AppHeaderProps {
   email?: string
@@ -33,22 +34,27 @@ export function AppHeader({ email, onSignOut }: AppHeaderProps) {
           )}
         </div>
       </div>
-      <nav aria-label="Secciones" className="mx-auto flex max-w-6xl gap-1 px-4 pb-2">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) =>
-              `inline-flex min-h-10 items-center rounded-lg px-4 font-semibold ${
-                isActive ? 'bg-white text-brand-800' : 'text-white hover:bg-brand-800'
-              }`
-            }
-          >
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 pb-2">
+        <nav aria-label="Secciones" className="flex gap-1">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                `inline-flex min-h-11 items-center rounded-lg px-4 font-semibold ${
+                  isActive ? 'bg-white text-brand-800' : 'text-white hover:bg-brand-800'
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="ml-auto">
+          <TextSizeControl variant="onDark" />
+        </div>
+      </div>
     </header>
   )
 }

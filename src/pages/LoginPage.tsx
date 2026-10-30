@@ -4,6 +4,7 @@ import { Beef, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { btnPrimary, inputBase, inputClass } from '../components/ui/styles'
 import { validateLogin, type LoginFieldErrors } from '../features/auth/loginSchema'
 import { useAuth } from '../features/auth/useAuth'
+import { TextSizeControl } from '../components/ui/TextSizeControl'
 
 export function LoginPage() {
   const { signIn } = useAuth()
@@ -131,6 +132,10 @@ export function LoginPage() {
             {submitting ? 'Ingresando…' : 'Iniciar sesión'}
           </button>
         </form>
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <p className="text-sm text-gray-600">Tamaño del texto</p>
+            <TextSizeControl variant="onLight" />
+        </div>
       </div>
     </main>
   )

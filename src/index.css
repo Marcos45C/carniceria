@@ -9,16 +9,39 @@
   --color-brand-800: #671624;
   --color-ok-600: #15803d;
   --color-error-600: #b91c1c;
+
+  /* Textos pequeños más grandes: el mínimo ya no queda tan chico. */
+  --text-xs: 0.875rem;
+  --text-sm: 0.9375rem;
+
+  /* El gris de apoyo más oscuro mejora el contraste del texto secundario. */
+  --color-gray-500: #4b5563;
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* Porcentaje: respeta el tamaño de letra que el usuario eligió en su navegador. */
+    font-size: 112.5%;
+  }
+
+  /* Selector "Tamaño del texto" (ver src/features/preferences/textSize.ts). */
+  html[data-text-size='large'] {
+    font-size: 125%;
+  }
+
+  html[data-text-size='xlarge'] {
+    font-size: 137.5%;
   }
 
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
     margin: 0;
     min-height: 100vh;
+  }
+
+  ::placeholder {
+    color: var(--color-gray-500);
+    opacity: 1;
   }
 }

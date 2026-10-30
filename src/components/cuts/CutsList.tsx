@@ -38,7 +38,7 @@ function CutTableRow({ cut, onSavePrice, onEditCut }: CutItemProps) {
         {edit.editing ? (
           <PriceInput edit={edit} cutName={cut.name} />
         ) : (
-          <span className="font-semibold tabular-nums">
+          <span className="text-lg font-semibold tabular-nums">
             {formatPesos(cut.price)}
             <span className="font-normal text-gray-600"> / {cut.unit}</span>
           </span>
@@ -120,8 +120,7 @@ export function CutsList({ cuts, onSavePrice, onEditCut }: CutsListProps) {
 
   return (
     <>
-      <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm md:block">
-        <table className="w-full text-left">
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm lg:block">        <table className="w-full text-left">
           <thead className="bg-gray-100 text-sm text-gray-700">
             <tr>
               <th scope="col" className="px-4 py-3 font-semibold">Corte</th>
@@ -139,7 +138,7 @@ export function CutsList({ cuts, onSavePrice, onEditCut }: CutsListProps) {
         </table>
       </div>
 
-      <ul className="space-y-3 md:hidden">
+      <ul className="space-y-3 lg:hidden">
         {cuts.map((cut) => (
           <CutCard key={cut.id} cut={cut} onSavePrice={onSavePrice} onEditCut={onEditCut} />
         ))}

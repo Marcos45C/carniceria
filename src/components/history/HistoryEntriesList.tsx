@@ -27,7 +27,7 @@ export function HistoryEntriesList({ entries, cutNames, currentUser }: HistoryEn
 
   return (
     <>
-      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm md:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm lg:block">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
@@ -66,7 +66,7 @@ export function HistoryEntriesList({ entries, cutNames, currentUser }: HistoryEn
         </table>
       </div>
 
-      <ul className="space-y-3 md:hidden">
+      <ul className="space-y-3 lg:hidden">
         {entries.map((entry) => (
           <li key={entry.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">

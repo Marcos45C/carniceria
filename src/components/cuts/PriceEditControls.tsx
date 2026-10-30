@@ -75,7 +75,7 @@ export function PriceActions({ edit, cutName, fullWidth = false, className = '' 
           className={`${btnSecondary} ${grow}`}
         >
           <X size={18} aria-hidden="true" />
-          Cancelar
+          Cancelarr
         </button>
       </div>
     )
