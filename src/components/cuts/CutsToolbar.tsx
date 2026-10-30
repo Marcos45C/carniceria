@@ -54,7 +54,7 @@ export function CutsToolbar({ filters, categories, onChange }: CutsToolbarProps)
         <div
           role="group"
           aria-label="Estado de los cortes"
-          className="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1"
+          className="flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1"
         >
           {STATUS_OPTIONS.map((option) => (
             <button
@@ -62,7 +62,7 @@ export function CutsToolbar({ filters, categories, onChange }: CutsToolbarProps)
               type="button"
               aria-pressed={filters.status === option.value}
               onClick={() => onChange({ ...filters, status: option.value })}
-              className={`min-h-10 rounded-md px-2 text-sm font-semibold ${
+              className={`min-h-11 flex-1 whitespace-nowrap rounded-md px-3 text-sm font-semibold ${
                 filters.status === option.value
                   ? 'bg-white text-brand-800 shadow-sm'
                   : 'text-gray-700 hover:bg-gray-200'

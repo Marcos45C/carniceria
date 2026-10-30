@@ -49,8 +49,11 @@ interface PriceActionsProps {
 }
 
 export function PriceActions({ edit, cutName, fullWidth = false, className = '' }: PriceActionsProps) {
-  const grow = fullWidth ? 'flex-1' : ''
-  const wrapper = `flex gap-2 ${fullWidth ? 'w-full' : ''} ${className}`
+  // En las tarjetas (fullWidth) los botones comparten la línea si caben y,
+  // si no, pasan a la siguiente ocupando todo el ancho. whitespace-nowrap evita
+  // que el texto del botón se parta en dos líneas.
+  const grow = fullWidth ? 'flex-1 whitespace-nowrap' : 'whitespace-nowrap'
+  const wrapper = `flex flex-wrap gap-2 ${fullWidth ? 'w-full' : ''} ${className}`
 
   if (edit.editing) {
     return (
@@ -75,7 +78,7 @@ export function PriceActions({ edit, cutName, fullWidth = false, className = '' 
           className={`${btnSecondary} ${grow}`}
         >
           <X size={18} aria-hidden="true" />
-          Cancelarr
+          Cancelar
         </button>
       </div>
     )
